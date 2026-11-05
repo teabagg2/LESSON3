@@ -1,0 +1,74 @@
+import pygame
+import random
+
+pygame.init()
+
+# Screen size and movement speed
+WIDTH, HEIGHT = 500, 400
+SPEED = 5
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Pet Food Collection Game")
+clock = pygame.time.Clock()
+
+# Full-screen background (pet_bg.jpg must be in the same folder)
+background = pygame.image.load("pet_bg.jpg")
+background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+
+# Named font
+font = pygame.font.SysFont("Arial", 36)
+
+
+class GameSprite(pygame.sprite.Sprite):
+    def __init__(self, colour, x, y, size):
+        super().__init__()
+        self.image = pygame.Surface((size, size))
+        self.image.fill(colour)
+        self.rect = self.image.get_rect(topleft=(x, y))
+
+    def move(self, dx, dy):
+        self.rect.x += dx
+        self.rect.y += dy
+        # Keep the sprite inside the screen
+        self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
+        self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
+
+# Create sprites and put them in a group
+pet = GameSprite((255, 165, 0), 50, 50, 40)
+food = GameSprite((200, 30, 30), random.randint(0, WIDTH - 25),
+                  random.randint(0, HEIGHT - 25), 25)
+
+all_sprites = pygame.sprite.Group()
+all_sprites.add(pet, food)
+
+collected = False
+running = True
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    dx = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * SPEED
+    dy = (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * SPEED
+    pet.move(dx, dy)
+
+    # Collision between the two Rects
+    if not collected and pet.rect.colliderect(food.rect):
+        all_sprites.remove(food)
+        collected = True
+
+    screen.blit(background, (0, 0))
+    all_sprites.draw(screen)
+
+    if collected:
+        text = font.render("Food Collected!", True, (255, 255, 255))
+        x = (WIDTH - text.get_width()) // 2
+        y = (HEIGHT - text.get_height()) // 2
+        screen.blit(text, (x, y))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
