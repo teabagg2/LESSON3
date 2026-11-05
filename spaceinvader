@@ -1,0 +1,76 @@
+import pygame
+import random
+
+pygame.init()
+
+WIDTH, HEIGHT = 600, 500
+SPEED = 5
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Space Invader - Part 1")
+clock = pygame.time.Clock()
+font = pygame.font.SysFont("Arial", 28)
+
+score = 0
+
+
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((40, 40))
+        self.image.fill((0, 200, 255))
+        self.rect = self.image.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+
+    def move(self, dx, dy):
+        self.rect.x += dx
+        self.rect.y += dy
+        self.rect.x = max(0, min(self.rect.x, WIDTH - self.rect.width))
+        self.rect.y = max(0, min(self.rect.y, HEIGHT - self.rect.height))
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((30, 30))
+        self.image.fill((220, 40, 40))
+        self.rect = self.image.get_rect()
+        self.randomize_position()
+
+    def randomize_position(self):
+        self.rect.x = random.randint(0, WIDTH - self.rect.width)
+        self.rect.y = random.randint(0, HEIGHT - self.rect.height - 100)
+
+
+# One player and seven enemies, placed randomly
+player = Player()
+player_group = pygame.sprite.GroupSingle(player)
+
+enemies = pygame.sprite.Group()
+for _ in range(7):
+    enemies.add(Enemy())
+
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    dx = (keys[pygame.K_RIGHT] - keys[pygame.K_LEFT]) * SPEED
+    dy = (keys[pygame.K_DOWN] - keys[pygame.K_UP]) * SPEED
+    player.move(dx, dy)
+
+    # Each collision adds one to the score; the enemy respawns elsewhere
+    hits = pygame.sprite.spritecollide(player, enemies, False)
+    for enemy in hits:
+        score += 1
+        enemy.randomize_position()
+
+    screen.fill((10, 10, 40))
+    enemies.draw(screen)
+    player_group.draw(screen)
+    screen.blit(font.render(f"Score: {score}", True, (255, 255, 255)), (10, 10))
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
