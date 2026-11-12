@@ -1,0 +1,199 @@
+
+import pygame
+import random
+import sys
+
+pygame.init()
+pygame.mixer.init()
+
+WIDTH = 800
+HEIGHT = 600
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Space Invaders")
+
+clock = pygame.time.Clock()
+
+WHITE = (255, 255, 255)
+GREEN = (0, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 100, 255)
+
+font = pygame.font.SysFont(None, 36)
+large_font = pygame.font.SysFont(None, 65)
+
+background = pygame.image.load("background.png")
+background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+
+pygame.mixer.music.load("background_music.mp3")
+pygame.mixer.music.set_volume(0.4)
+pygame.mixer.music.play(-1)
+
+shoot_sound = pygame.mixer.Sound("shoot.wav")
+explosion_sound = pygame.mixer.Sound("explosion.wav")
+
+player = pygame.Rect(370, 520, 60, 40)
+player_speed = 6
+
+bullets = []
+bullet_speed = 8
+
+enemies = []
+
+enemy_speed = 2
+enemy_direction = 1
+
+score = 0
+game_over = False
+
+for row in range(3):
+    for col in range(8):
+        enemy = pygame.Rect(60 + col * 85, 50 + row * 65, 40, 35)
+        enemies.append(enemy)
+
+
+def draw_player():
+    pygame.draw.polygon(screen, GREEN, [
+        (player.centerx, player.top),
+        (player.left, player.bottom),
+        (player.right, player.bottom)
+    ])
+
+
+def draw_enemies():
+    for enemy in enemies:
+        pygame.draw.rect(screen, RED, enemy)
+        pygame.draw.circle(screen, WHITE,
+                           (enemy.left + 10, enemy.top + 12), 4)
+        pygame.draw.circle(screen, WHITE,
+                           (enemy.right - 10, enemy.top + 12), 4)
+
+
+def draw_bullets():
+    for bullet in bullets:
+        pygame.draw.rect(screen, BLUE, bullet)
+
+
+def display_score():
+    text = font.render(f"Score: {score}", True, WHITE)
+    screen.blit(text, (10, 10))
+
+
+def reset_game():
+    global player, bullets, enemies
+    global score, game_over, enemy_speed, enemy_direction
+
+    player = pygame.Rect(370, 520, 60, 40)
+    bullets = []
+    enemies = []
+
+    for row in range(3):
+        for col in range(8):
+            enemy = pygame.Rect(60 + col * 85, 50 + row * 65, 40, 35)
+            enemies.append(enemy)
+
+    score = 0
+    enemy_speed = 2
+    enemy_direction = 1
+    game_over = False
+
+
+running = True
+
+while running:
+
+    screen.blit(background, (0, 0))
+
+    for event in pygame.event.get():
+
+        if event.type == pygame.QUIT:
+            running = False
+
+        if event.type == pygame.KEYDOWN:
+
+            if event.key == pygame.K_SPACE and not game_over:
+                bullet = pygame.Rect(
+                    player.centerx - 3, player.top, 6, 15
+                )
+                bullets.append(bullet)
+                shoot_sound.play()
+
+            if event.key == pygame.K_r and game_over:
+                reset_game()
+
+    if not game_over:
+
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_LEFT] and player.left > 0:
+            player.x -= player_speed
+
+        if keys[pygame.K_RIGHT] and player.right < WIDTH:
+            player.x += player_speed
+
+        for bullet in bullets[:]:
+            bullet.y -= bullet_speed
+
+            if bullet.bottom < 0:
+                bullets.remove(bullet)
+
+        for enemy in enemies:
+            enemy.x += enemy_speed * enemy_direction
+
+        if enemies:
+            if any(enemy.right >= WIDTH or enemy.left <= 0
+                   for enemy in enemies):
+
+                enemy_direction *= -1
+
+                for enemy in enemies:
+                    enemy.y += 20
+
+        for bullet in bullets[:]:
+            for enemy in enemies[:]:
+
+                if bullet.colliderect(enemy):
+                    bullets.remove(bullet)
+                    enemies.remove(enemy)
+                    score += 10
+                    explosion_sound.play()
+                    break
+
+        for enemy in enemies:
+            if enemy.bottom >= player.top:
+                game_over = True
+
+        if not enemies:
+            game_over = True
+
+        draw_player()
+        draw_enemies()
+        draw_bullets()
+        display_score()
+
+    else:
+
+        pygame.mixer.music.stop()
+
+        if not enemies:
+            message = large_font.render("YOU WIN!", True, GREEN)
+        else:
+            message = large_font.render("GAME OVER", True, RED)
+
+        screen.blit(message, (WIDTH // 2 - 150, HEIGHT // 2 - 50))
+
+        final_score = font.render(
+            f"Final Score: {score}", True, WHITE
+        )
+        screen.blit(final_score, (WIDTH // 2 - 90, HEIGHT // 2 + 20))
+
+        restart = font.render(
+            "Press R to Restart", True, WHITE
+        )
+        screen.blit(restart, (WIDTH // 2 - 115, HEIGHT // 2 + 65))
+
+    pygame.display.update()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
